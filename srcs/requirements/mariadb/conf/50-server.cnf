@@ -1,0 +1,12 @@
+[mysqld]
+# Allow connections from other containers on the Docker network
+bind-address = 0.0.0.0
+
+# Ensure the database listens on the standard port
+port = 3306
+
+# Point to your initialized data directory
+datadir = /var/lib/mysql
+
+# Point to the runtime socket folder created by your script
+socket = /run/mysqld/mysqld.sock

@@ -17,8 +17,35 @@ services:
     networks:
       - inception
 
+    # healthcheck:
+    #       test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+    #       interval: 5s
+    #       timeout: 5s
+    #       retries: 5
+  wordpress:
+      build:
+        context: ./requirements/wordpress
+
+      container_name: wordpress
+
+      restart: unless-stopped
+
+      env_file:
+        - .env
+
+      depends_on:
+        - mariadb
+          # condition: service_healthy
+
+      volumes:
+        - wordpress_data:/var/www/html
+
+      networks:
+        - inception
+
 volumes:
   mariadb_data:
+  wordpress_data:
 
 networks:
   inception:
