@@ -64,7 +64,17 @@ services:
 
 volumes:
   mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/aberrami/data/mariadb
+      o: bind
   wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/aberrami/data/wordpress
+      o: bind
 
 networks:
   inception:
