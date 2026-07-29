@@ -1,5 +1,6 @@
 services:
   mariadb:
+    image: mariadb
     build:
       context: ./requirements/mariadb
       dockerfile: Dockerfile
@@ -23,26 +24,28 @@ services:
     #       timeout: 5s
     #       retries: 5
   wordpress:
-      build:
-        context: ./requirements/wordpress
+    image: wordpress
+    build:
+      context: ./requirements/wordpress
 
-      container_name: wordpress
+    container_name: wordpress
 
-      restart: unless-stopped
+    restart: unless-stopped
 
-      env_file:
-        - .env
+    env_file:
+      - .env
 
-      depends_on:
-        - mariadb
-          # condition: service_healthy
+    depends_on:
+      - mariadb
+        # condition: service_healthy
 
-      volumes:
-        - wordpress_data:/var/www/html
+    volumes:
+      - wordpress_data:/var/www/html
 
-      networks:
-        - inception
+    networks:
+      - inception
   nginx:
+    image: nginx
     build:
       context: ./requirements/nginx
 
