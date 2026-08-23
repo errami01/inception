@@ -10,6 +10,8 @@ setup:
 	@sudo mkdir -p /home/$(LOGIN)/data/wordpress
 	@sudo mkdir -p /home/$(LOGIN)/data/mariadb
 	@sudo chown -R $(USER):$(USER) /home/$(LOGIN)/data
+	@sudo chown -R 999:999 /home/$(LOGIN)/data/mariadb
+# 	@sudo chmod -R 777 /home/$(LOGIN)/data
 
 up:
 	$(COMPOSE) up --build
