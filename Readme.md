@@ -435,3 +435,263 @@ secrets/
 └── credentials.txt
 ```
 These files must remain local and must not be committed to the repository.
+
+# Comparison of Key Concepts
+## Virtual Machines vs Docker
+### Virtual Machines
+A virtual machine emulates a complete computer.
+```
+Host OS
+   │
+   ├── Hypervisor
+   │
+   └── Virtual Machine
+          ├── Guest OS
+          ├── Libraries
+          └── Application
+```
+Each VM contains its own operating system kernel and consumes more resources.
+
+Advantages:
+
+- Stronger isolation.
+- Can run completely different operating systems.
+- Full operating system environment.
+
+Disadvantages:
+
+- Higher memory usage.
+- Higher storage requirements.
+- Slower startup.
+- More overhead.
+
+### Docker
+Docker containers share the host kernel while isolating processes, filesystems, networks, and resources.
+```
+Host OS
+   │
+   └── Docker
+        ├── NGINX container
+        ├── WordPress container
+        └── MariaDB container
+```
+Advantages:
+
+- Lightweight.
+- Fast startup.
+- Easy to reproduce.
+- Convenient service isolation.
+- Efficient resource usage.
+
+Disadvantages:
+
+- Containers share the host kernel.
+- Isolation is different from a full VM.
+- Requires understanding container lifecycle and persistence.
+
+For Inception, Docker is appropriate because the goal is to create several independent services while keeping the infrastructure lightweight and reproducible.
+
+## Secrets vs Environment Variables
+### Environment Variables
+Environment variables are convenient for configuration:
+```
+DOMAIN_NAME=YOUR_LOGIN.42.fr
+MYSQL_DATABASE=wordpress
+```
+Advantages:
+
+- Simple.
+- Easy to use from shell scripts.
+- Supported directly by Docker Compose.
+- Good for non-sensitive configuration.
+
+Disadvantages:
+
+- Values may be visible through container configuration.
+- Passwords stored directly in .env are sensitive.
+- Easy to accidentally commit .env to Git.
+
+### Docker Secrets
+Docker secrets are designed for confidential information such as:
+
+- Passwords.
+- API keys.
+- Private credentials.
+
+Instead of exposing a password as a normal environment variable, the secret can be mounted as a file inside the container.
+
+Advantages:
+
+- Better separation between configuration and sensitive data.
+- Credentials are not written directly into Dockerfiles.
+- More appropriate for production secrets.
+
+Disadvantages:
+
+- Slightly more complex.
+- Requires additional configuration.
+
+For this project, environment variables are used for normal configuration while confidential information should preferably be handled through Docker secrets and always kept out of Git.
+
+## Docker Network vs Host Network
+### Docker Bridge Network
+The project uses a dedicated Docker bridge network.
+```
+             inception network
+
+        ┌──────────────────────┐
+        │                      │
+        │  NGINX               │
+        │    │                 │
+        │    ▼                 │
+        │  WordPress           │
+        │    │                 │
+        │    ▼                 │
+        │  MariaDB             │
+        │                      │
+        └──────────────────────┘
+```
+Containers can communicate using service names:
+```
+mariadb
+wordpress
+```
+Advantages:
+
+- Service isolation.
+- Internal DNS.
+- No need for hardcoded IP addresses.
+- Only required ports need to be exposed to the host.
+
+### Host Network
+
+With host networking, a container directly uses the host's network stack.
+
+Advantages:
+
+- Minimal networking overhead.
+- Direct access to host interfaces.
+
+Disadvantages:
+
+- Much weaker network isolation.
+- Port conflicts with host services.
+- Containers lose the benefits of Docker's isolated network model.
+
+Host networking is forbidden by the Inception requirements and is therefore not used.
+
+## Docker Volumes vs Bind Mounts
+### Docker Volumes
+A Docker volume is managed by Docker.
+
+For this project, named volumes are used for persistent WordPress and MariaDB data.
+
+Advantages:
+
+- Managed by Docker.
+- Easy to attach to containers.
+- Survive container recreation.
+- Suitable for persistent application data.
+
+### Bind Mounts
+
+A bind mount directly maps a host filesystem path:
+```
+Host directory
+      │
+      ▼
+Container directory
+```
+Advantages:
+
+- Direct access to host files.
+- Convenient for development.
+- Easy to inspect manually.
+
+Disadvantages:
+
+- Tightly coupled to the host filesystem.
+- Permissions can become more complicated.
+- Less abstracted than Docker-managed volumes.
+
+The Inception project specifically requires Docker named volumes for the two persistent storages, with their data located under:
+```
+/home/YOUR_LOGIN/data
+```
+Therefore the project uses named Docker volumes rather than direct bind mounts for these persistent storages.
+
+# Design Choices
+## One service per container
+Each major service has its own container:
+```
+NGINX
+WordPress + PHP-FPM
+MariaDB
+```
+This follows the Unix/container principle of keeping services focused and independently manageable.
+
+If one service crashes, Docker can restart that service without combining unrelated processes into one container.
+## Debian as the base distribution
+Debian is used as the base distribution for the custom images.
+
+This provides:
+
+- A stable package ecosystem.
+- Familiar package management through apt.
+- Good documentation.
+- Straightforward debugging.
+- A predictable environment for PHP, NGINX, and MariaDB.
+
+The project does not use the latest tag.
+
+## Service discovery through Docker DNS
+Instead of hardcoding IP addresses:
+```
+172.x.x.x
+```
+services use Docker Compose service names:
+```
+mariadb
+wordpress
+```
+Docker provides internal DNS resolution for these names.
+
+This makes the infrastructure more portable because container IP addresses can change.
+
+### Initialization scripts
+Initialization logic is separated from the Docker image build process.
+
+The Dockerfile installs software and copies configuration.
+
+Entrypoint scripts perform runtime initialization.
+
+For example:
+```
+MariaDB container starts
+        │
+        ▼
+Check whether database is initialized
+        │
+        ├── No → initialize
+        │
+        └── Yes → skip
+        │
+        ▼
+Start MariaDB
+```
+The same principle is used for WordPress.
+
+This allows persistent data to survive container recreation.
+# Resources
+- Docker  : https://docs.docker.com/
+- NGINX   : https://nginx.org/en/docs/
+- MariaDB : https://mariadb.com/docs/
+# AI Usage
+AI tools were used as a learning and development assistant during this project.
+AI was used for:
+
+- Explaining Docker concepts such as images, containers, volumes, networks, and PID 1.
+- Explaining the difference between Docker build-time and container runtime.
+- Understanding Docker Compose service configuration.
+- Troubleshooting configuration and runtime issues.
+- Helping create and organize documentation.
