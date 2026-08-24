@@ -379,6 +379,10 @@ The infrastructure exposes:
 and does not expose port 80.
 
 TLS is configured using TLS 1.2 and TLS 1.3.
+To check it:
+```
+openssl s_client -connect localhost:443 -tls1_2
+```
 
 The expected domain is:
 ```
